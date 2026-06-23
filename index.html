@@ -42,6 +42,7 @@
         .btn-primary{background:var(--primary);color:#fff}
         .btn-primary:disabled{opacity:0.5;pointer-events:none}
         .btn-danger{color:var(--danger);border:1.5px solid #fecaca}
+        .btn-success{background:var(--success);color:#fff}
         .results-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(220px,1fr));gap:16px}
         .result-card{background:#fff;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
         .result-card .card-header{padding:10px 14px;background:#fafbfc;font-weight:600;font-size:13px;display:flex;justify-content:space-between}
@@ -64,17 +65,17 @@
 <header class="app-header">
     <div class="header-inner">
         <div class="logo"><span>🧀</span> 芝士大王专用拼图</div>
-        <div style="font-size:12px;color:#64748b;">无限水印 · 原图比例 · 单张扣号</div>
+        <div style="font-size:12px;color:#64748b;">无限上传 · 原图比例 · 水印缩放</div>
     </div>
 </header>
 
 <div class="main-container">
     <div class="card">
-        <h3 style="margin-bottom:10px;">📤 上传照片 (最多100张)</h3>
+        <h3 style="margin-bottom:10px;">📤 上传照片 (不限量)</h3>
         <div class="upload-zone" id="uploadZone">
             <div style="font-size:32px;">🖼️</div>
             <div style="font-weight:600;">点击或拖拽照片到此处</div>
-            <div style="font-size:13px;color:#94a3b8;">JPG/PNG/WebP · 最多100张</div>
+            <div style="font-size:13px;color:#94a3b8;">JPG/PNG/WebP · 不限数量</div>
         </div>
         <input type="file" id="fileInput" accept="image/*" multiple hidden>
 
@@ -114,7 +115,10 @@
         <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                 <h3>🎉 拼图结果</h3>
-                <button class="btn btn-primary" id="downloadZipBtn">📦 打包下载 ZIP</button>
+                <div style="display:flex; gap:6px;">
+                    <button class="btn btn-success" id="saveAllBtn">📱 一键保存全部</button>
+                    <button class="btn btn-primary" id="downloadZipBtn">📦 打包下载 ZIP</button>
+                </div>
             </div>
             <div class="results-grid" id="resultsGrid"></div>
         </div>
@@ -139,6 +143,7 @@
     const resultsSection = document.getElementById('resultsSection');
     const resultsGrid = document.getElementById('resultsGrid');
     const downloadZipBtn = document.getElementById('downloadZipBtn');
+    const saveAllBtn = document.getElementById('saveAllBtn');
     const loadingOverlay = document.getElementById('loadingOverlay');
     const loadingText = document.getElementById('loadingText');
 
@@ -156,44 +161,25 @@
         '1x1': { cols:1, rows:1 }
     };
 
-    // 根据比例和宫格计算格式
     function getFormat(ratio, grid, images) {
         const { cols, rows } = GRID_CONFIG[grid];
         if (ratio === 'original' && images && images.length) {
-            // 原图比例：使用第一张图片的宽高比作为格子基础，但所有格子统一尺寸
             const firstImg = images.find(img => img);
             if (firstImg) {
                 const aspect = firstImg.width / firstImg.height;
                 const CELL_BASE = 500;
                 let cellW, cellH;
-                if (aspect >= 1) {
-                    cellW = CELL_BASE;
-                    cellH = Math.round(CELL_BASE / aspect);
-                } else {
-                    cellH = CELL_BASE;
-                    cellW = Math.round(CELL_BASE * aspect);
-                }
-                return {
-                    cellW, cellH,
-                    puzzleW: cellW * cols,
-                    puzzleH: cellH * rows,
-                    cols, rows
-                };
+                if (aspect >= 1) { cellW = CELL_BASE; cellH = Math.round(CELL_BASE / aspect); }
+                else { cellH = CELL_BASE; cellW = Math.round(CELL_BASE * aspect); }
+                return { cellW, cellH, puzzleW: cellW * cols, puzzleH: cellH * rows, cols, rows };
             }
         }
-        // 固定比例
         const BASE_CELL = 500;
         let cellW, cellH;
         if (ratio === '1:1') { cellW = BASE_CELL; cellH = BASE_CELL; }
         else if (ratio === '3:4') { cellW = BASE_CELL; cellH = Math.round(BASE_CELL * 4/3); }
         else if (ratio === '9:16') { cellW = BASE_CELL; cellH = Math.round(BASE_CELL * 16/9); }
-        return {
-            cellW: Math.round(cellW),
-            cellH: Math.round(cellH),
-            puzzleW: Math.round(cellW * cols),
-            puzzleH: Math.round(cellH * rows),
-            cols, rows
-        };
+        return { cellW: Math.round(cellW), cellH: Math.round(cellH), puzzleW: Math.round(cellW * cols), puzzleH: Math.round(cellH * rows), cols, rows };
     }
 
     function showToast(msg) {
@@ -206,26 +192,23 @@
     document.querySelectorAll('.btn-option[data-grid]').forEach(b => {
         b.addEventListener('click', () => {
             document.querySelectorAll('.btn-option[data-grid]').forEach(x => x.classList.remove('active'));
-            b.classList.add('active');
-            currentGrid = b.dataset.grid;
+            b.classList.add('active'); currentGrid = b.dataset.grid;
         });
     });
     document.querySelectorAll('.btn-option[data-ratio]').forEach(b => {
         b.addEventListener('click', () => {
             document.querySelectorAll('.btn-option[data-ratio]').forEach(x => x.classList.remove('active'));
-            b.classList.add('active');
-            currentRatio = b.dataset.ratio;
+            b.classList.add('active'); currentRatio = b.dataset.ratio;
         });
     });
     document.querySelectorAll('.btn-option[data-numbering]').forEach(b => {
         b.addEventListener('click', () => {
             document.querySelectorAll('.btn-option[data-numbering]').forEach(x => x.classList.remove('active'));
-            b.classList.add('active');
-            numberingEnabled = b.dataset.numbering === 'true';
+            b.classList.add('active'); numberingEnabled = b.dataset.numbering === 'true';
         });
     });
 
-    // ==================== 上传逻辑 ====================
+    // ==================== 上传逻辑（无限量） ====================
     uploadZone.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', e => {
         if (e.target.files.length) addFiles(Array.from(e.target.files));
@@ -240,18 +223,10 @@
 
     function addFiles(newFiles) {
         const images = newFiles.filter(f => f.type.startsWith('image/'));
-        if (!images.length) return showToast('请选择图片文件');
-        if (uploadedFiles.length + images.length > 100) {
-            const allowed = 100 - uploadedFiles.length;
-            if (allowed <= 0) return showToast('已达100张上限');
-            uploadedFiles.push(...images.slice(0, allowed));
-            images.slice(0, allowed).forEach(f => objectURLs.push(URL.createObjectURL(f)));
-        } else {
-            uploadedFiles.push(...images);
-            images.forEach(f => objectURLs.push(URL.createObjectURL(f)));
-        }
-        resetResults();
-        renderPhotos();
+        if (!images.length) { showToast('请选择图片文件'); return; }
+        uploadedFiles.push(...images);
+        images.forEach(f => objectURLs.push(URL.createObjectURL(f)));
+        resetResults(); renderPhotos();
         photosSection.style.display = 'block';
         photosSection.scrollIntoView({ behavior:'smooth' });
     }
@@ -260,8 +235,7 @@
         photosGrid.innerHTML = '';
         uploadedFiles.forEach((file, i) => {
             const item = document.createElement('div');
-            item.className = 'thumb-item';
-            item.draggable = true; item.dataset.index = i;
+            item.className = 'thumb-item'; item.draggable = true; item.dataset.index = i;
             item.innerHTML = `<img src="${objectURLs[i]}" draggable="false"><span class="badge">${i+1}</span><button class="del-btn">×</button>`;
             item.querySelector('.del-btn').addEventListener('click', e => { e.stopPropagation(); deletePhoto(i); });
             item.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', i); item.classList.add('dragging'); });
@@ -306,7 +280,6 @@
         canvas.width = fmt.puzzleW; canvas.height = fmt.puzzleH;
         const ctx = canvas.getContext('2d');
         ctx.fillStyle = '#fff'; ctx.fillRect(0,0,fmt.puzzleW,fmt.puzzleH);
-
         const totalCells = fmt.cols * fmt.rows;
         const isOriginal = ratio === 'original';
 
@@ -315,23 +288,16 @@
             const posX = col * fmt.cellW, posY = row * fmt.cellH;
             const img = i < images.length ? images[i] : null;
             const off = offsets[i] || {x:0,y:0};
-
             ctx.save(); ctx.beginPath(); ctx.rect(posX,posY,fmt.cellW,fmt.cellH); ctx.clip();
             if (img && img.width && img.height) {
                 if (isOriginal) {
-                    // 原图比例：完整显示（contain），留白
                     const scale = Math.min(fmt.cellW / img.width, fmt.cellH / img.height);
                     const sw = img.width * scale, sh = img.height * scale;
-                    const baseX = posX + (fmt.cellW - sw) / 2;
-                    const baseY = posY + (fmt.cellH - sh) / 2;
-                    ctx.drawImage(img, baseX + off.x, baseY + off.y, sw, sh);
+                    ctx.drawImage(img, posX+(fmt.cellW-sw)/2+off.x, posY+(fmt.cellH-sh)/2+off.y, sw, sh);
                 } else {
-                    // 固定比例：覆盖填充（cover）
                     const scale = Math.max(fmt.cellW / img.width, fmt.cellH / img.height);
                     const sw = img.width * scale, sh = img.height * scale;
-                    const baseX = posX + (fmt.cellW - sw) / 2;
-                    const baseY = posY + (fmt.cellH - sh) / 2;
-                    ctx.drawImage(img, baseX + off.x, baseY + off.y, sw, sh);
+                    ctx.drawImage(img, posX+(fmt.cellW-sw)/2+off.x, posY+(fmt.cellH-sh)/2+off.y, sw, sh);
                 }
             } else {
                 ctx.fillStyle='#f1f5f9'; ctx.fillRect(posX,posY,fmt.cellW,fmt.cellH);
@@ -349,8 +315,6 @@
             }
             ctx.restore();
         }
-
-        // 柔光
         if (sl && sl.enabled && sl.intensity>0) {
             ctx.save(); ctx.globalAlpha = sl.intensity/100;
             const grad = ctx.createRadialGradient(fmt.puzzleW/2, fmt.puzzleH/2, 0, fmt.puzzleW/2, fmt.puzzleH/2, Math.max(fmt.puzzleW, fmt.puzzleH));
@@ -358,7 +322,6 @@
             ctx.fillStyle=grad; ctx.fillRect(0,0,fmt.puzzleW,fmt.puzzleH);
             ctx.restore();
         }
-        // 图片水印
         if (wm && wm.enabled && wm.img) {
             ctx.save(); ctx.globalAlpha = wm.opacity;
             const wmW = wm.width || (wm.img.width * (wm.sizePercent/100));
@@ -379,7 +342,7 @@
         loadingOverlay.style.display='flex'; loadingText.textContent='加载照片...'; generateBtn.disabled=true;
         try {
             const images = await loadImagesFromFiles(uploadedFiles);
-            const fmt = getFormat(ratio, grid, images); // 传递images用于原图比例计算
+            const fmt = getFormat(ratio, grid, images);
             const groupSize = GRID_CONFIG[grid].cols * GRID_CONFIG[grid].rows;
             loadingText.textContent='生成中...';
             puzzleResults=[];
@@ -398,7 +361,7 @@
                     softlight: { intensity:0, enabled:false }
                 });
                 globalNum += group.length;
-                await sleep(20);
+                await sleep(10);
             }
             renderResults();
             resultsSection.style.display='block';
@@ -431,6 +394,54 @@
             resultsGrid.appendChild(card);
         });
     }
+
+    // ==================== 一键保存全部（iOS引导方案） ====================
+    saveAllBtn.addEventListener('click', () => {
+        if (!puzzleResults.length) {
+            showToast('请先生成拼图');
+            return;
+        }
+
+        // 检测是否为iOS设备
+        const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+
+        // 构建一个新页面展示所有拼图
+        const allImagesHTML = puzzleResults.map((p, i) => {
+            return `<div style="margin-bottom:24px; text-align:center;">
+                <p style="font-weight:bold; margin-bottom:8px;">拼图 #${i+1}</p>
+                <img src="${p.dataURL}" style="width:100%;max-width:400px;border-radius:12px;display:block;margin:0 auto;">
+            </div>`;
+        }).join('');
+
+        const newWindow = window.open('', '_blank');
+        newWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>保存全部拼图到相册</title>
+                <style>
+                    body { font-family: -apple-system, sans-serif; background: #f0f2f5; padding: 16px; margin: 0; }
+                    .tip-banner { background: #fff; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; }
+                    .tip-banner h2 { margin: 0 0 8px 0; font-size: 18px; }
+                    .tip-banner p { margin: 0; font-size: 14px; color: #64748b; line-height: 1.6; }
+                    .tip-banner .emoji { font-size: 32px; }
+                </style>
+            </head>
+            <body>
+                <div class="tip-banner">
+                    <div class="emoji">📱</div>
+                    <h2>保存全部拼图到相册</h2>
+                    <p>请<b>长按</b>每张图片，然后选择<b>「存储到“照片”」</b><br>即可逐一保存到你的相册中</p>
+                    ${isIOS ? '<p style="color:#4A6CF7;margin-top:8px;">💡 iOS提示：在每张图片上长按，弹出菜单选择存储即可</p>' : '<p style="color:#4A6CF7;margin-top:8px;">💡 长按图片保存到相册，或使用下方下载按钮</p>'}
+                </div>
+                ${allImagesHTML}
+            </body>
+            </html>
+        `);
+        newWindow.document.close();
+    });
 
     function reapplyEffects(idx) {
         const puzzle = puzzleResults[idx]; const fmt = puzzle.format;
@@ -512,8 +523,7 @@
             ctx.clearRect(0,0,canvas.width,canvas.height);
             if (previewImg.complete) ctx.drawImage(previewImg, 0,0,canvas.width,canvas.height);
             if (wmImg) {
-                ctx.save();
-                ctx.globalAlpha = wmOpacity;
+                ctx.save(); ctx.globalAlpha = wmOpacity;
                 const wmW = wmImg.width * (wmSize/100);
                 const wmH = wmImg.height * (wmSize/100);
                 const x = canvas.width * wmAnchorX - wmW/2;
@@ -533,20 +543,14 @@
 
         function getTouchPos(touch) {
             const rect = canvas.getBoundingClientRect();
-            return {
-                x: (touch.clientX - rect.left) / rect.width,
-                y: (touch.clientY - rect.top) / rect.height
-            };
+            return { x: (touch.clientX - rect.left) / rect.width, y: (touch.clientY - rect.top) / rect.height };
         }
 
         function handleTouchStart(e) {
             e.preventDefault();
             if (!wmImg) return;
             const keys = Object.keys(touches);
-            if (keys.length === 0) {
-                initialAnchorX = wmAnchorX;
-                initialAnchorY = wmAnchorY;
-            }
+            if (keys.length === 0) { initialAnchorX = wmAnchorX; initialAnchorY = wmAnchorY; }
             for (let touch of e.changedTouches) touches[touch.identifier] = touch;
             if (Object.keys(touches).length === 2) {
                 const touchArr = Object.values(touches);
@@ -554,8 +558,7 @@
                 const dy = touchArr[0].clientY - touchArr[1].clientY;
                 initialPinchDist = Math.sqrt(dx*dx + dy*dy);
                 initialSize = wmSize;
-                initialAnchorX = wmAnchorX;
-                initialAnchorY = wmAnchorY;
+                initialAnchorX = wmAnchorX; initialAnchorY = wmAnchorY;
             }
         }
 
@@ -564,8 +567,7 @@
             if (!wmImg) return;
             const touchArr = Object.values(touches);
             if (touchArr.length === 1) {
-                const touch = touchArr[0];
-                const pos = getTouchPos(touch);
+                const pos = getTouchPos(touchArr[0]);
                 wmAnchorX = Math.min(1, Math.max(0, pos.x));
                 wmAnchorY = Math.min(1, Math.max(0, pos.y));
             } else if (touchArr.length === 2) {
@@ -575,7 +577,7 @@
                 const dist = Math.sqrt(dx*dx + dy*dy);
                 if (initialPinchDist > 0) {
                     const scale = dist / initialPinchDist;
-                    wmSize = Math.max(1, initialSize * scale); // 无限放大，最小1%
+                    wmSize = Math.max(1, initialSize * scale);
                 }
                 const cx = (t1.clientX + t2.clientX) / 2;
                 const cy = (t1.clientY + t2.clientY) / 2;
@@ -590,10 +592,8 @@
             e.preventDefault();
             for (let touch of e.changedTouches) delete touches[touch.identifier];
             if (Object.keys(touches).length < 2) {
-                initialPinchDist = 0;
-                initialSize = wmSize;
-                initialAnchorX = wmAnchorX;
-                initialAnchorY = wmAnchorY;
+                initialPinchDist = 0; initialSize = wmSize;
+                initialAnchorX = wmAnchorX; initialAnchorY = wmAnchorY;
             }
         }
 
@@ -602,32 +602,16 @@
         canvas.addEventListener('touchend', handleTouchEnd);
         canvas.addEventListener('touchcancel', handleTouchEnd);
 
-        // 桌面鼠标支持
         let isDragging = false;
-        canvas.addEventListener('mousedown', e => {
-            if (!wmImg) return;
-            isDragging = true;
-            initialAnchorX = wmAnchorX;
-            initialAnchorY = wmAnchorY;
-        });
-        window.addEventListener('mousemove', e => {
-            if (!isDragging || !wmImg) return;
-            const pos = getTouchPos({clientX: e.clientX, clientY: e.clientY});
-            wmAnchorX = Math.min(1, Math.max(0, pos.x));
-            wmAnchorY = Math.min(1, Math.max(0, pos.y));
-            drawPreview();
-        });
-        window.addEventListener('mouseup', () => { isDragging = false; });
+        canvas.addEventListener('mousedown', e => { if (!wmImg) return; isDragging=true; initialAnchorX=wmAnchorX; initialAnchorY=wmAnchorY; });
+        window.addEventListener('mousemove', e => { if (!isDragging || !wmImg) return; const pos = getTouchPos({clientX:e.clientX,clientY:e.clientY}); wmAnchorX=Math.min(1,Math.max(0,pos.x)); wmAnchorY=Math.min(1,Math.max(0,pos.y)); drawPreview(); });
+        window.addEventListener('mouseup', ()=> { isDragging=false; });
 
         fileInput.addEventListener('change', () => {
             const file = fileInput.files[0];
             if (!file || !file.type.startsWith('image/')) return;
             const reader = new FileReader();
-            reader.onload = e => {
-                const img = new Image();
-                img.onload = () => { wmImg = img; drawPreview(); };
-                img.src = e.target.result;
-            };
+            reader.onload = e => { const img = new Image(); img.onload = () => { wmImg = img; drawPreview(); }; img.src = e.target.result; };
             reader.readAsDataURL(file);
         });
 
@@ -635,15 +619,13 @@
         modal.querySelector('#applyWm').addEventListener('click', ()=>{
             if (!wmImg) { showToast('请先上传水印图片'); return; }
             puzzle.watermark.img = wmImg;
-            puzzle.watermark.anchorX = wmAnchorX;
-            puzzle.watermark.anchorY = wmAnchorY;
+            puzzle.watermark.anchorX = wmAnchorX; puzzle.watermark.anchorY = wmAnchorY;
             puzzle.watermark.sizePercent = wmSize;
             puzzle.watermark.opacity = parseInt(opSlider.value)/100;
             puzzle.watermark.enabled = true;
             puzzle.softlight.intensity = parseInt(slSlider.value);
             puzzle.softlight.enabled = puzzle.softlight.intensity > 0;
-            modal.remove();
-            reapplyEffects(idx);
+            modal.remove(); reapplyEffects(idx);
         });
         modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
     }
@@ -714,7 +696,6 @@
             if (col>=0 && col<fmt.cols && row>=0 && row<fmt.rows) return row*fmt.cols+col;
             return -1;
         }
-
         function startDrag(e) { e.preventDefault(); const idx = getCellIdx(e.clientX, e.clientY); if (idx>=0 && images[idx]) { dragging=idx; dragStart={x:e.clientX,y:e.clientY}; dragOffsetStart={x:offsets[idx].x,y:offsets[idx].y}; } }
         function moveDrag(e) { if (dragging<0) return; e.preventDefault(); offsets[dragging].x = dragOffsetStart.x + (e.clientX - dragStart.x); offsets[dragging].y = dragOffsetStart.y + (e.clientY - dragStart.y); redraw(); }
         function endDrag() { dragging=-1; }
