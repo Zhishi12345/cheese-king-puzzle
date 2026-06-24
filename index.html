@@ -33,16 +33,19 @@
         .btn-option{padding:6px 16px;border-radius:20px;border:2px solid var(--border);background:#fff;font-weight:600;cursor:pointer;font-size:13px;transition:0.2s}
         .btn-option.active{border-color:var(--primary);background:var(--primary-light);color:var(--primary)}
         .photos-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(70px,1fr));gap:8px;max-height:250px;overflow-y:auto;padding:4px}
-        .thumb-item{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;cursor:grab;border:2px solid transparent}
+        .photos-grid.sort-mode{max-height:none; grid-template-columns:repeat(auto-fill, minmax(100px,1fr)); gap:12px; padding:12px; background:#f8fafc; border-radius:12px;}
+        .thumb-item{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;cursor:grab;border:2px solid transparent;transition:transform 0.15s;}
         .thumb-item img{width:100%;height:100%;object-fit:cover;pointer-events:none}
         .thumb-item .badge{position:absolute;top:2px;left:2px;background:rgba(0,0,0,0.6);color:#fff;width:18px;height:18px;border-radius:50%;font-size:10px;display:flex;align-items:center;justify-content:center}
-        .thumb-item .del-btn{position:absolute;top:2px;right:2px;background:rgba(239,68,68,0.9);color:#fff;border:none;width:18px;height:18px;border-radius:50%;font-size:12px;display:none;cursor:pointer}
+        .thumb-item .del-btn{position:absolute;top:2px;right:2px;background:rgba(239,68,68,0.9);color:#fff;border:none;width:18px;height:18px;border-radius:50%;font-size:12px;display:none;cursor:pointer;z-index:2}
         .thumb-item:hover .del-btn{display:flex;align-items:center;justify-content:center}
+        .thumb-item.dragging{opacity:0.5; transform:scale(0.95); border-color:var(--primary);}
         .btn{display:inline-flex;align-items:center;gap:4px;padding:8px 16px;border-radius:20px;border:none;font-weight:600;font-size:13px;cursor:pointer;background:#fff;color:var(--text);transition:0.2s}
         .btn-primary{background:var(--primary);color:#fff}
         .btn-primary:disabled{opacity:0.5;pointer-events:none}
         .btn-danger{color:var(--danger);border:1.5px solid #fecaca}
         .btn-success{background:var(--success);color:#fff}
+        .btn-warning{background:#f59e0b;color:#fff;}
         .results-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(220px,1fr));gap:16px}
         .result-card{background:#fff;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
         .result-card .card-header{padding:10px 14px;background:#fafbfc;font-weight:600;font-size:13px;display:flex;justify-content:space-between}
@@ -50,22 +53,22 @@
         .result-card .actions{padding:10px;display:flex;flex-wrap:wrap;gap:6px}
         .actions .btn{flex:1;justify-content:center;padding:6px 10px;font-size:12px}
         .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:500;display:flex;align-items:center;justify-content:center}
-        .modal-panel{background:#fff;border-radius:var(--radius);padding:24px;width:90%;max-width:500px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 40px rgba(0,0,0,0.2)}
+        .modal-panel{background:#fff;border-radius:var(--radius);padding:24px;width:90%;max-width:400px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 40px rgba(0,0,0,0.2)}
         .modal-panel h3{margin-bottom:16px}
         .modal-panel input,.modal-panel select{width:100%;padding:8px;margin-bottom:12px;border-radius:8px;border:1px solid var(--border);font-size:14px}
         .modal-panel label{font-weight:600;font-size:14px;display:block;margin-bottom:4px}
         .modal-panel .btn-row{display:flex;gap:8px;margin-top:16px}
-        .watermark-edit-container{position:relative;width:100%;margin:10px 0;border:1px solid var(--border);border-radius:8px;overflow:hidden;touch-action:none;background:#f8fafc}
-        .watermark-edit-container canvas{width:100%;display:block}
         .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;z-index:600;animation:toastIn 0.3s}
         @keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}}
+        #verticalColsGroup { margin-top: 4px; }
+        #verticalCols { width: 70px; padding: 6px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px; text-align: center; }
     </style>
 </head>
 <body>
 <header class="app-header">
     <div class="header-inner">
         <div class="logo"><span>🧀</span> 芝士大王专用拼图</div>
-        <div style="font-size:12px;color:#64748b;">无限上传 · 原图比例 · 水印缩放</div>
+        <div style="font-size:12px;color:#64748b;">排序 · iOS下载/长按 · 三种画质</div>
     </div>
 </header>
 
@@ -92,6 +95,17 @@
             <button class="btn-option" data-ratio="3:4">3:4</button>
             <button class="btn-option" data-ratio="9:16">9:16</button>
             <button class="btn-option" data-ratio="original">原图</button>
+            <button class="btn-option" data-ratio="vertical">竖版拼接</button>
+        </div>
+        <div class="selector-group" id="verticalColsGroup" style="display:none;">
+            <span class="label">每行图片数：</span>
+            <input type="number" id="verticalCols" value="3" min="1" max="20" step="1">
+        </div>
+        <div class="selector-group">
+            <span class="label">🖼️ 画质：</span>
+            <button class="btn-option active" data-quality="high">标准高清 (JPEG 90%)</button>
+            <button class="btn-option" data-quality="compressed">压缩分享 (JPEG 80%)</button>
+            <button class="btn-option" data-quality="lossless">超清原图 (PNG 无损)</button>
         </div>
         <div class="selector-group">
             <span class="label">🔢 标号：</span>
@@ -103,6 +117,7 @@
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <span><strong id="photoCount">0</strong> 张</span>
                 <div style="display:flex; gap:6px;">
+                    <button class="btn btn-warning" id="sortModeBtn">🔄 调整顺序</button>
                     <button class="btn btn-danger" id="clearAllBtn">清空</button>
                     <button class="btn btn-primary" id="generateBtn">✨ 生成拼图</button>
                 </div>
@@ -116,7 +131,7 @@
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                 <h3>🎉 拼图结果</h3>
                 <div style="display:flex; gap:6px;">
-                    <button class="btn btn-success" id="saveAllBtn">📱 一键保存全部</button>
+                    <button class="btn btn-success" id="saveAllBtn">📥 一键保存全部</button>
                     <button class="btn btn-primary" id="downloadZipBtn">📦 打包下载 ZIP</button>
                 </div>
             </div>
@@ -132,7 +147,6 @@
 
 <script>
 (function() {
-    // ==================== DOM ====================
     const uploadZone = document.getElementById('uploadZone');
     const fileInput = document.getElementById('fileInput');
     const photosSection = document.getElementById('photosSection');
@@ -146,6 +160,9 @@
     const saveAllBtn = document.getElementById('saveAllBtn');
     const loadingOverlay = document.getElementById('loadingOverlay');
     const loadingText = document.getElementById('loadingText');
+    const verticalColsGroup = document.getElementById('verticalColsGroup');
+    const verticalColsInput = document.getElementById('verticalCols');
+    const sortModeBtn = document.getElementById('sortModeBtn');
 
     let uploadedFiles = [];
     let objectURLs = [];
@@ -153,6 +170,8 @@
     let currentGrid = '2x2';
     let currentRatio = '1:1';
     let numberingEnabled = true;
+    let currentQuality = 'high';
+    let isSortMode = false;
 
     const GRID_CONFIG = {
         '2x2': { cols:2, rows:2 },
@@ -160,6 +179,10 @@
         '4x4': { cols:4, rows:4 },
         '1x1': { cols:1, rows:1 }
     };
+
+    function toggleVerticalCols() {
+        verticalColsGroup.style.display = currentRatio === 'vertical' ? 'flex' : 'none';
+    }
 
     function getFormat(ratio, grid, images) {
         const { cols, rows } = GRID_CONFIG[grid];
@@ -188,7 +211,7 @@
     }
     function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-    // ==================== UI绑定 ====================
+    // UI绑定
     document.querySelectorAll('.btn-option[data-grid]').forEach(b => {
         b.addEventListener('click', () => {
             document.querySelectorAll('.btn-option[data-grid]').forEach(x => x.classList.remove('active'));
@@ -199,6 +222,7 @@
         b.addEventListener('click', () => {
             document.querySelectorAll('.btn-option[data-ratio]').forEach(x => x.classList.remove('active'));
             b.classList.add('active'); currentRatio = b.dataset.ratio;
+            toggleVerticalCols();
         });
     });
     document.querySelectorAll('.btn-option[data-numbering]').forEach(b => {
@@ -207,8 +231,34 @@
             b.classList.add('active'); numberingEnabled = b.dataset.numbering === 'true';
         });
     });
+    document.querySelectorAll('.btn-option[data-quality]').forEach(b => {
+        b.addEventListener('click', () => {
+            document.querySelectorAll('.btn-option[data-quality]').forEach(x => x.classList.remove('active'));
+            b.classList.add('active'); currentQuality = b.dataset.quality;
+        });
+    });
 
-    // ==================== 上传逻辑（无限量） ====================
+    // 排序模式切换
+    sortModeBtn.addEventListener('click', () => {
+        isSortMode = !isSortMode;
+        if (isSortMode) {
+            photosGrid.classList.add('sort-mode');
+            sortModeBtn.textContent = '✅ 完成排序';
+            sortModeBtn.classList.add('btn-primary');
+            sortModeBtn.classList.remove('btn-warning');
+            generateBtn.disabled = true;
+            showToast('拖拽缩略图即可调整顺序，完成后点击“完成排序”');
+        } else {
+            photosGrid.classList.remove('sort-mode');
+            sortModeBtn.textContent = '🔄 调整顺序';
+            sortModeBtn.classList.remove('btn-primary');
+            sortModeBtn.classList.add('btn-warning');
+            generateBtn.disabled = uploadedFiles.length === 0;
+        }
+        renderPhotos();
+    });
+
+    // 上传逻辑
     uploadZone.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', e => {
         if (e.target.files.length) addFiles(Array.from(e.target.files));
@@ -228,30 +278,44 @@
         images.forEach(f => objectURLs.push(URL.createObjectURL(f)));
         resetResults(); renderPhotos();
         photosSection.style.display = 'block';
-        photosSection.scrollIntoView({ behavior:'smooth' });
     }
 
     function renderPhotos() {
         photosGrid.innerHTML = '';
         uploadedFiles.forEach((file, i) => {
             const item = document.createElement('div');
-            item.className = 'thumb-item'; item.draggable = true; item.dataset.index = i;
-            item.innerHTML = `<img src="${objectURLs[i]}" draggable="false"><span class="badge">${i+1}</span><button class="del-btn">×</button>`;
-            item.querySelector('.del-btn').addEventListener('click', e => { e.stopPropagation(); deletePhoto(i); });
-            item.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', i); item.classList.add('dragging'); });
-            item.addEventListener('dragend', () => item.classList.remove('dragging'));
-            item.addEventListener('dragover', e => e.preventDefault());
-            item.addEventListener('drop', e => { e.preventDefault(); const from = parseInt(e.dataTransfer.getData('text/plain')); if (from !== i) swapPhotos(from, i); });
-            item.addEventListener('click', e => {
-                if (e.target.classList.contains('del-btn')) return;
-                const inp = document.createElement('input'); inp.type='file'; inp.accept='image/*';
-                inp.onchange = () => { if (inp.files[0]) replacePhoto(i, inp.files[0]); };
-                inp.click();
+            item.className = 'thumb-item';
+            item.draggable = true;
+            item.dataset.index = i;
+            item.innerHTML = `<img src="${objectURLs[i]}" draggable="false"><span class="badge">${i+1}</span>${!isSortMode ? '<button class="del-btn">×</button>' : ''}`;
+            if (!isSortMode) {
+                item.querySelector('.del-btn').addEventListener('click', e => { e.stopPropagation(); deletePhoto(i); });
+            }
+            item.addEventListener('dragstart', e => {
+                if (!isSortMode) return;
+                e.dataTransfer.setData('text/plain', i);
+                item.classList.add('dragging');
             });
+            item.addEventListener('dragend', () => item.classList.remove('dragging'));
+            item.addEventListener('dragover', e => { if (isSortMode) e.preventDefault(); });
+            item.addEventListener('drop', e => {
+                e.preventDefault();
+                if (!isSortMode) return;
+                const from = parseInt(e.dataTransfer.getData('text/plain'));
+                if (from !== i && !isNaN(from)) swapPhotos(from, i);
+            });
+            if (!isSortMode) {
+                item.addEventListener('click', e => {
+                    if (e.target.classList.contains('del-btn')) return;
+                    const inp = document.createElement('input'); inp.type='file'; inp.accept='image/*';
+                    inp.onchange = () => { if (inp.files[0]) replacePhoto(i, inp.files[0]); };
+                    inp.click();
+                });
+            }
             photosGrid.appendChild(item);
         });
         photoCountEl.textContent = uploadedFiles.length;
-        generateBtn.disabled = uploadedFiles.length === 0;
+        generateBtn.disabled = uploadedFiles.length === 0 || isSortMode;
     }
 
     function deletePhoto(i) { URL.revokeObjectURL(objectURLs[i]); uploadedFiles.splice(i,1); objectURLs.splice(i,1); resetResults(); renderPhotos(); if (!uploadedFiles.length) photosSection.style.display='none'; }
@@ -260,7 +324,6 @@
     clearAllBtn.addEventListener('click', () => { objectURLs.forEach(u=>URL.revokeObjectURL(u)); uploadedFiles=[]; objectURLs=[]; resetResults(); renderPhotos(); photosSection.style.display='none'; });
     function resetResults() { puzzleResults=[]; resultsSection.style.display='none'; resultsGrid.innerHTML=''; }
 
-    // ==================== 图片加载 ====================
     function loadImagesFromFiles(files) {
         return new Promise(resolve => {
             const imgs=[]; let loaded=0;
@@ -274,15 +337,19 @@
         });
     }
 
-    // ==================== 核心渲染 ====================
-    function renderFinalPuzzle(images, offsets, fmt, grid, numbering, startNum, wm, sl, ratio) {
+    function exportCanvas(canvas, quality) {
+        if (quality === 'lossless') return canvas.toDataURL('image/png');
+        const q = quality === 'high' ? 0.9 : 0.8;
+        return canvas.toDataURL('image/jpeg', q);
+    }
+    function getFileExtension(quality) { return quality === 'lossless' ? 'png' : 'jpg'; }
+
+    function renderGridPuzzle(images, offsets, fmt, numbering, startNum, isOriginal, quality) {
         const canvas = document.createElement('canvas');
         canvas.width = fmt.puzzleW; canvas.height = fmt.puzzleH;
         const ctx = canvas.getContext('2d');
         ctx.fillStyle = '#fff'; ctx.fillRect(0,0,fmt.puzzleW,fmt.puzzleH);
         const totalCells = fmt.cols * fmt.rows;
-        const isOriginal = ratio === 'original';
-
         for (let i=0; i<totalCells; i++) {
             const col = i % fmt.cols, row = Math.floor(i/fmt.cols);
             const posX = col * fmt.cellW, posY = row * fmt.cellH;
@@ -290,15 +357,9 @@
             const off = offsets[i] || {x:0,y:0};
             ctx.save(); ctx.beginPath(); ctx.rect(posX,posY,fmt.cellW,fmt.cellH); ctx.clip();
             if (img && img.width && img.height) {
-                if (isOriginal) {
-                    const scale = Math.min(fmt.cellW / img.width, fmt.cellH / img.height);
-                    const sw = img.width * scale, sh = img.height * scale;
-                    ctx.drawImage(img, posX+(fmt.cellW-sw)/2+off.x, posY+(fmt.cellH-sh)/2+off.y, sw, sh);
-                } else {
-                    const scale = Math.max(fmt.cellW / img.width, fmt.cellH / img.height);
-                    const sw = img.width * scale, sh = img.height * scale;
-                    ctx.drawImage(img, posX+(fmt.cellW-sw)/2+off.x, posY+(fmt.cellH-sh)/2+off.y, sw, sh);
-                }
+                const scale = isOriginal ? Math.min(fmt.cellW / img.width, fmt.cellH / img.height) : Math.max(fmt.cellW / img.width, fmt.cellH / img.height);
+                const sw = img.width * scale, sh = img.height * scale;
+                ctx.drawImage(img, posX+(fmt.cellW-sw)/2+off.x, posY+(fmt.cellH-sh)/2+off.y, sw, sh);
             } else {
                 ctx.fillStyle='#f1f5f9'; ctx.fillRect(posX,posY,fmt.cellW,fmt.cellH);
                 ctx.fillStyle='#94a3b8'; ctx.font='bold 20px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
@@ -315,53 +376,107 @@
             }
             ctx.restore();
         }
-        if (sl && sl.enabled && sl.intensity>0) {
-            ctx.save(); ctx.globalAlpha = sl.intensity/100;
-            const grad = ctx.createRadialGradient(fmt.puzzleW/2, fmt.puzzleH/2, 0, fmt.puzzleW/2, fmt.puzzleH/2, Math.max(fmt.puzzleW, fmt.puzzleH));
-            grad.addColorStop(0,'rgba(255,255,255,0.8)'); grad.addColorStop(0.6,'rgba(255,255,255,0.3)'); grad.addColorStop(1,'rgba(255,255,255,0)');
-            ctx.fillStyle=grad; ctx.fillRect(0,0,fmt.puzzleW,fmt.puzzleH);
-            ctx.restore();
-        }
-        if (wm && wm.enabled && wm.img) {
-            ctx.save(); ctx.globalAlpha = wm.opacity;
-            const wmW = wm.width || (wm.img.width * (wm.sizePercent/100));
-            const wmH = wm.height || (wm.img.height * (wm.sizePercent/100));
-            const x = fmt.puzzleW * wm.anchorX - wmW/2;
-            const y = fmt.puzzleH * wm.anchorY - wmH/2;
-            ctx.drawImage(wm.img, x, y, wmW, wmH);
-            ctx.restore();
-        }
-        ctx.strokeStyle='#e2e8f0'; ctx.lineWidth=2; ctx.strokeRect(1,1,fmt.puzzleW-2,fmt.puzzleH-2);
-        return canvas.toDataURL('image/jpeg',0.92);
+        return exportCanvas(canvas, quality);
     }
 
-    // ==================== 生成拼图 ====================
+    function renderVerticalPuzzle(images, cols, numbering, startNum, quality) {
+        const CELL_WIDTH = 500;
+        const rows = Math.ceil(images.length / cols);
+        const rowHeights = [];
+        for (let r = 0; r < rows; r++) {
+            let maxH = 0;
+            for (let c = 0; c < cols; c++) {
+                const idx = r * cols + c;
+                if (idx < images.length && images[idx]) {
+                    const img = images[idx];
+                    const scaledH = (CELL_WIDTH / img.width) * img.height;
+                    if (scaledH > maxH) maxH = scaledH;
+                }
+            }
+            rowHeights.push(Math.max(maxH, CELL_WIDTH * 0.5));
+        }
+        const totalHeight = rowHeights.reduce((s, h) => s + h, 0);
+        const canvas = document.createElement('canvas');
+        canvas.width = CELL_WIDTH * cols;
+        canvas.height = Math.round(totalHeight);
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        let yOffset = 0;
+        for (let r = 0; r < rows; r++) {
+            const rowH = rowHeights[r];
+            for (let c = 0; c < cols; c++) {
+                const idx = r * cols + c;
+                if (idx >= images.length) continue;
+                const img = images[idx];
+                if (!img) continue;
+                const scaledW = CELL_WIDTH;
+                const scaledH = (CELL_WIDTH / img.width) * img.height;
+                const x = c * CELL_WIDTH;
+                const y = yOffset + (rowH - scaledH) / 2;
+                ctx.drawImage(img, x, y, scaledW, scaledH);
+                if (numbering && startNum !== undefined) {
+                    const num = startNum + idx;
+                    const fontSize = Math.min(CELL_WIDTH, scaledH) * 0.08;
+                    ctx.save();
+                    ctx.font = `bold ${fontSize}px "Arial"`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'bottom';
+                    const numX = x + scaledW / 2;
+                    const numY = y + scaledH - 4;
+                    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                    ctx.fillText(num, numX + 1, numY + 1);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillText(num, numX, numY);
+                    ctx.restore();
+                }
+            }
+            yOffset += rowH;
+        }
+        return exportCanvas(canvas, quality);
+    }
+
     generateBtn.addEventListener('click', async () => {
-        if (!uploadedFiles.length) return;
-        const grid = currentGrid; const ratio = currentRatio;
+        if (!uploadedFiles.length || isSortMode) return;
         loadingOverlay.style.display='flex'; loadingText.textContent='加载照片...'; generateBtn.disabled=true;
         try {
             const images = await loadImagesFromFiles(uploadedFiles);
-            const fmt = getFormat(ratio, grid, images);
-            const groupSize = GRID_CONFIG[grid].cols * GRID_CONFIG[grid].rows;
             loadingText.textContent='生成中...';
-            puzzleResults=[];
-            const groupCount = Math.ceil(images.length / groupSize);
-            let globalNum = 1;
-            for (let g=0; g<groupCount; g++) {
-                const group = images.slice(g*groupSize, g*groupSize+groupSize);
-                const sources = group.map(img=>img?img.src:null);
-                const offsets = Array(groupSize).fill(null).map(()=>({x:0,y:0}));
-                const startNum = numberingEnabled ? globalNum : undefined;
-                const rawURL = renderFinalPuzzle(group, offsets, fmt, grid, numberingEnabled, startNum, null, null, ratio);
+            puzzleResults = [];
+            if (currentRatio === 'vertical') {
+                const cols = parseInt(verticalColsInput.value) || 3;
+                if (cols < 1) { showToast('每行至少1张'); return; }
+                const startNum = numberingEnabled ? 1 : undefined;
+                const dataURL = renderVerticalPuzzle(images, cols, numberingEnabled, startNum, currentQuality);
                 puzzleResults.push({
-                    rawDataURL: rawURL, dataURL: rawURL, offsets, imageSources: sources,
-                    format: {...fmt, grid, ratio}, numbering: numberingEnabled, startNum: startNum,
-                    watermark: { enabled:false, img:null, sizePercent:20, anchorX:0.5, anchorY:0.5, opacity:0.7 },
-                    softlight: { intensity:0, enabled:false }
+                    dataURL,
+                    offsets: [],
+                    imageSources: images.map(img => img ? img.src : null),
+                    format: { grid: 'vertical', ratio: 'vertical', cols },
+                    numbering: numberingEnabled,
+                    startNum: startNum
                 });
-                globalNum += group.length;
-                await sleep(10);
+            } else {
+                const grid = currentGrid;
+                const fmt = getFormat(currentRatio, grid, images);
+                const groupSize = GRID_CONFIG[grid].cols * GRID_CONFIG[grid].rows;
+                const groupCount = Math.ceil(images.length / groupSize);
+                let globalNum = 1;
+                for (let g=0; g<groupCount; g++) {
+                    const group = images.slice(g*groupSize, g*groupSize+groupSize);
+                    const sources = group.map(img=>img?img.src:null);
+                    const offsets = Array(groupSize).fill(null).map(()=>({x:0,y:0}));
+                    const startNum = numberingEnabled ? globalNum : undefined;
+                    const isOriginal = currentRatio === 'original';
+                    const dataURL = renderGridPuzzle(group, offsets, fmt, numberingEnabled, startNum, isOriginal, currentQuality);
+                    puzzleResults.push({
+                        dataURL, offsets, imageSources: sources,
+                        format: {...fmt, grid, ratio: currentRatio},
+                        numbering: numberingEnabled, startNum: startNum
+                    });
+                    globalNum += group.length;
+                    await sleep(10);
+                }
             }
             renderResults();
             resultsSection.style.display='block';
@@ -375,37 +490,98 @@
         puzzleResults.forEach((puzzle, idx) => {
             const card = document.createElement('div');
             card.className='result-card';
+            const photoCount = puzzle.imageSources ? puzzle.imageSources.filter(Boolean).length : (puzzle.offsets ? puzzle.offsets.length : 0);
             card.innerHTML=`
-                <div class="card-header"><span>拼图 #${idx+1}</span><span>${puzzle.imageSources.filter(Boolean).length}/${puzzle.offsets.length} 张</span></div>
+                <div class="card-header"><span>拼图 #${idx+1}</span><span>${photoCount} 张</span></div>
                 <img src="${puzzle.dataURL}" alt="拼图${idx+1}">
                 <div class="actions">
-                    <button class="btn edit-pos">🖐️ 位置</button>
-                    <button class="btn watermark-btn">🏞️ 水印/柔光</button>
-                    <button class="btn reset-fx" style="color:#ef4444;">↺ 重置</button>
+                    ${puzzle.format.grid !== 'vertical' ? '<button class="btn edit-pos">🖐️ 位置</button>' : ''}
                     <button class="btn download-btn">💾 下载</button>
-                    <button class="btn save-btn">📱 相册</button>
+                    <button class="btn save-btn">📱 保存</button>
                 </div>`;
-            card.querySelector('.edit-pos').addEventListener('click', ()=>openEditor(idx));
-            card.querySelector('.watermark-btn').addEventListener('click', ()=>openWatermarkSettings(idx));
-            card.querySelector('.reset-fx').addEventListener('click', ()=>resetEffects(idx));
+            if (puzzle.format.grid !== 'vertical') {
+                card.querySelector('.edit-pos').addEventListener('click', ()=>openEditor(idx));
+            }
             card.querySelector('.download-btn').addEventListener('click', ()=>downloadSingle(puzzle, idx));
-            card.querySelector('.save-btn').addEventListener('click', ()=>saveToAlbum(puzzle.dataURL, idx));
+            card.querySelector('.save-btn').addEventListener('click', ()=>saveWithOptions(puzzle, idx));
             card.querySelector('img').addEventListener('click', ()=>openPreview(puzzle.dataURL));
             resultsGrid.appendChild(card);
         });
     }
 
-    // ==================== 一键保存全部（iOS引导方案） ====================
-    saveAllBtn.addEventListener('click', () => {
-        if (!puzzleResults.length) {
-            showToast('请先生成拼图');
-            return;
-        }
-
-        // 检测是否为iOS设备
+    // 单张保存：iOS 弹出选择，其他系统直接下载
+    function saveWithOptions(puzzle, idx) {
         const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+        if (isIOS) {
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="modal-panel" style="text-align:center;">
+                    <h3>保存方式</h3>
+                    <button class="btn btn-primary" id="downloadDirect" style="width:100%; margin-bottom:8px;">📥 直接下载</button>
+                    <button class="btn" id="longPressSave" style="width:100%;">🖼️ 长按保存</button>
+                    <button class="btn" id="cancelOption" style="width:100%; margin-top:8px; color:#888;">取消</button>
+                </div>`;
+            document.body.appendChild(modal);
+            modal.querySelector('#downloadDirect').addEventListener('click', () => { modal.remove(); downloadSingle(puzzle, idx); });
+            modal.querySelector('#longPressSave').addEventListener('click', () => { modal.remove(); showLongPressGuide(puzzle.dataURL); });
+            modal.querySelector('#cancelOption').addEventListener('click', () => modal.remove());
+            modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+        } else {
+            downloadSingle(puzzle, idx);
+        }
+    }
 
-        // 构建一个新页面展示所有拼图
+    function showLongPressGuide(dataURL) {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-panel" style="text-align:center;">
+                <div style="font-size:40px;">📱</div>
+                <h3>保存到相册</h3>
+                <p style="margin:12px 0;">请<b>长按</b>下方图片，然后选择<br><b>「存储到“照片”」</b></p>
+                <img src="${dataURL}" style="width:100%; border-radius:12px; margin-bottom:12px;">
+                <button class="btn btn-primary" id="closeGuide">知道了</button>
+            </div>`;
+        document.body.appendChild(modal);
+        modal.querySelector('#closeGuide').addEventListener('click', () => modal.remove());
+        modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    }
+
+    // 下载单张
+    function downloadSingle(puzzle, idx) {
+        const a = document.createElement('a');
+        a.href = puzzle.dataURL;
+        a.download = `芝士大王拼图_${idx+1}.${getFileExtension(currentQuality)}`;
+        a.click();
+    }
+
+    // 一键保存全部：iOS 弹出选择，直接下载ZIP 或 跳转并列展示页面
+    function saveAllOptions() {
+        if (!puzzleResults.length) { showToast('请先生成拼图'); return; }
+        const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+        if (isIOS) {
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="modal-panel" style="text-align:center;">
+                    <h3>保存全部方式</h3>
+                    <button class="btn btn-primary" id="downloadZipDirect" style="width:100%; margin-bottom:8px;">📥 直接下载 ZIP</button>
+                    <button class="btn" id="longPressAll" style="width:100%;">🖼️ 长按保存（并列展示）</button>
+                    <button class="btn" id="cancelAllOption" style="width:100%; margin-top:8px; color:#888;">取消</button>
+                </div>`;
+            document.body.appendChild(modal);
+            modal.querySelector('#downloadZipDirect').addEventListener('click', () => { modal.remove(); downloadAllAsZip(); });
+            modal.querySelector('#longPressAll').addEventListener('click', () => { modal.remove(); openLongPressAllPage(); });
+            modal.querySelector('#cancelAllOption').addEventListener('click', () => modal.remove());
+            modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+        } else {
+            downloadAllAsZip();
+        }
+    }
+
+    // 打开并列展示全部拼图的页面（用于长按保存）
+    function openLongPressAllPage() {
         const allImagesHTML = puzzleResults.map((p, i) => {
             return `<div style="margin-bottom:24px; text-align:center;">
                 <p style="font-weight:bold; margin-bottom:8px;">拼图 #${i+1}</p>
@@ -415,222 +591,60 @@
 
         const newWindow = window.open('', '_blank');
         newWindow.document.write(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>保存全部拼图到相册</title>
-                <style>
-                    body { font-family: -apple-system, sans-serif; background: #f0f2f5; padding: 16px; margin: 0; }
-                    .tip-banner { background: #fff; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; }
-                    .tip-banner h2 { margin: 0 0 8px 0; font-size: 18px; }
-                    .tip-banner p { margin: 0; font-size: 14px; color: #64748b; line-height: 1.6; }
-                    .tip-banner .emoji { font-size: 32px; }
-                </style>
-            </head>
-            <body>
+            <!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>保存全部拼图到相册</title>
+            <style>
+                body { font-family: -apple-system, sans-serif; background: #f0f2f5; padding: 16px; margin: 0; }
+                .tip-banner { background: #fff; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; }
+                .tip-banner h2 { margin: 0 0 8px 0; font-size: 18px; }
+                .tip-banner p { margin: 0; font-size: 14px; color: #64748b; line-height: 1.6; }
+                .tip-banner .emoji { font-size: 32px; }
+            </style>
+            </head><body>
                 <div class="tip-banner">
                     <div class="emoji">📱</div>
                     <h2>保存全部拼图到相册</h2>
-                    <p>请<b>长按</b>每张图片，然后选择<b>「存储到“照片”」</b><br>即可逐一保存到你的相册中</p>
-                    ${isIOS ? '<p style="color:#4A6CF7;margin-top:8px;">💡 iOS提示：在每张图片上长按，弹出菜单选择存储即可</p>' : '<p style="color:#4A6CF7;margin-top:8px;">💡 长按图片保存到相册，或使用下方下载按钮</p>'}
+                    <p>请<b>长按</b>每张图片，然后选择<br><b>「存储到“照片”」</b>即可逐一保存</p>
                 </div>
                 ${allImagesHTML}
-            </body>
-            </html>
+            </body></html>
         `);
         newWindow.document.close();
-    });
-
-    function reapplyEffects(idx) {
-        const puzzle = puzzleResults[idx]; const fmt = puzzle.format;
-        const loadPromises = puzzle.imageSources.map(src => new Promise(resolve => {
-            if (!src) return resolve(null);
-            const img = new Image(); img.onload=()=>resolve(img); img.onerror=()=>resolve(null); img.src=src;
-        }));
-        Promise.all(loadPromises).then(images => {
-            puzzle.dataURL = renderFinalPuzzle(images, puzzle.offsets, fmt, fmt.grid, puzzle.numbering, puzzle.startNum,
-                puzzle.watermark.enabled ? puzzle.watermark : null,
-                puzzle.softlight.enabled ? puzzle.softlight : null, puzzle.format.ratio);
-            renderResults(); showToast('效果已应用');
-        });
-    }
-    function resetEffects(idx) {
-        const puzzle = puzzleResults[idx];
-        puzzle.watermark.enabled=false; puzzle.watermark.img=null;
-        puzzle.softlight.enabled=false; puzzle.dataURL = puzzle.rawDataURL;
-        renderResults(); showToast('效果已重置');
     }
 
-    // ==================== 水印编辑（手指拖拽+无限缩放） ====================
-    function openWatermarkSettings(idx) {
-        const puzzle = puzzleResults[idx];
-        const fmt = puzzle.format;
-        const previewImg = new Image();
-        previewImg.src = puzzle.dataURL;
-
-        const modal = document.createElement('div');
-        modal.className='modal-overlay';
-        modal.innerHTML=`
-            <div class="modal-panel">
-                <h3>🏞️ 水印与柔光</h3>
-                <label>上传水印图片 (支持PNG透明)</label>
-                <input type="file" id="wmFile" accept="image/*">
-                <div class="watermark-edit-container" id="wmEditContainer">
-                    <canvas id="wmEditCanvas"></canvas>
-                </div>
-                <label>透明度 (<span id="opVal">${Math.round(puzzle.watermark.opacity*100)}</span>%)</label>
-                <input type="range" id="wmOpacity" min="10" max="100" value="${puzzle.watermark.opacity*100}">
-                <hr style="margin:16px 0;">
-                <label>✨ 柔光强度 (<span id="slVal">${puzzle.softlight.intensity}</span>%)</label>
-                <input type="range" id="slIntensity" min="0" max="100" value="${puzzle.softlight.intensity}">
-                <div class="btn-row">
-                    <button class="btn btn-primary" id="applyWm">应用</button>
-                    <button class="btn" id="closeWm">取消</button>
-                </div>
-            </div>`;
-        document.body.appendChild(modal);
-
-        const canvas = modal.querySelector('#wmEditCanvas');
-        const ctx = canvas.getContext('2d');
-        const container = modal.querySelector('#wmEditContainer');
-        const opSlider = modal.querySelector('#wmOpacity');
-        const opVal = modal.querySelector('#opVal');
-        const slSlider = modal.querySelector('#slIntensity');
-        const slVal = modal.querySelector('#slVal');
-        const fileInput = modal.querySelector('#wmFile');
-        opSlider.addEventListener('input', ()=> opVal.textContent = opSlider.value);
-        slSlider.addEventListener('input', ()=> slVal.textContent = slSlider.value);
-
-        let wmImg = puzzle.watermark.img;
-        let wmAnchorX = puzzle.watermark.anchorX;
-        let wmAnchorY = puzzle.watermark.anchorY;
-        let wmSize = puzzle.watermark.sizePercent;
-        let wmOpacity = puzzle.watermark.opacity;
-
-        function resizeCanvas() {
-            const maxW = container.clientWidth;
-            const scale = maxW / fmt.puzzleW;
-            canvas.width = fmt.puzzleW; canvas.height = fmt.puzzleH;
-            canvas.style.width = maxW + 'px';
-            canvas.style.height = (fmt.puzzleH * scale) + 'px';
+    // ZIP 下载
+    async function downloadAllAsZip() {
+        if (!puzzleResults.length) return;
+        downloadZipBtn.disabled = true;
+        saveAllBtn.disabled = true;
+        const zip = new JSZip();
+        for (let i=0; i<puzzleResults.length; i++) {
+            const blob = await (await fetch(puzzleResults[i].dataURL)).blob();
+            zip.file(`芝士大王拼图_${i+1}.${getFileExtension(currentQuality)}`, blob);
         }
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
-
-        function drawPreview() {
-            ctx.clearRect(0,0,canvas.width,canvas.height);
-            if (previewImg.complete) ctx.drawImage(previewImg, 0,0,canvas.width,canvas.height);
-            if (wmImg) {
-                ctx.save(); ctx.globalAlpha = wmOpacity;
-                const wmW = wmImg.width * (wmSize/100);
-                const wmH = wmImg.height * (wmSize/100);
-                const x = canvas.width * wmAnchorX - wmW/2;
-                const y = canvas.height * wmAnchorY - wmH/2;
-                ctx.drawImage(wmImg, x, y, wmW, wmH);
-                ctx.restore();
-            }
-        }
-        previewImg.onload = drawPreview;
-        drawPreview();
-
-        let touches = {};
-        let initialPinchDist = 0;
-        let initialSize = wmSize;
-        let initialAnchorX = wmAnchorX;
-        let initialAnchorY = wmAnchorY;
-
-        function getTouchPos(touch) {
-            const rect = canvas.getBoundingClientRect();
-            return { x: (touch.clientX - rect.left) / rect.width, y: (touch.clientY - rect.top) / rect.height };
-        }
-
-        function handleTouchStart(e) {
-            e.preventDefault();
-            if (!wmImg) return;
-            const keys = Object.keys(touches);
-            if (keys.length === 0) { initialAnchorX = wmAnchorX; initialAnchorY = wmAnchorY; }
-            for (let touch of e.changedTouches) touches[touch.identifier] = touch;
-            if (Object.keys(touches).length === 2) {
-                const touchArr = Object.values(touches);
-                const dx = touchArr[0].clientX - touchArr[1].clientX;
-                const dy = touchArr[0].clientY - touchArr[1].clientY;
-                initialPinchDist = Math.sqrt(dx*dx + dy*dy);
-                initialSize = wmSize;
-                initialAnchorX = wmAnchorX; initialAnchorY = wmAnchorY;
-            }
-        }
-
-        function handleTouchMove(e) {
-            e.preventDefault();
-            if (!wmImg) return;
-            const touchArr = Object.values(touches);
-            if (touchArr.length === 1) {
-                const pos = getTouchPos(touchArr[0]);
-                wmAnchorX = Math.min(1, Math.max(0, pos.x));
-                wmAnchorY = Math.min(1, Math.max(0, pos.y));
-            } else if (touchArr.length === 2) {
-                const t1 = touchArr[0], t2 = touchArr[1];
-                const dx = t1.clientX - t2.clientX;
-                const dy = t1.clientY - t2.clientY;
-                const dist = Math.sqrt(dx*dx + dy*dy);
-                if (initialPinchDist > 0) {
-                    const scale = dist / initialPinchDist;
-                    wmSize = Math.max(1, initialSize * scale);
-                }
-                const cx = (t1.clientX + t2.clientX) / 2;
-                const cy = (t1.clientY + t2.clientY) / 2;
-                const pos = getTouchPos({clientX: cx, clientY: cy});
-                wmAnchorX = Math.min(1, Math.max(0, pos.x));
-                wmAnchorY = Math.min(1, Math.max(0, pos.y));
-            }
-            drawPreview();
-        }
-
-        function handleTouchEnd(e) {
-            e.preventDefault();
-            for (let touch of e.changedTouches) delete touches[touch.identifier];
-            if (Object.keys(touches).length < 2) {
-                initialPinchDist = 0; initialSize = wmSize;
-                initialAnchorX = wmAnchorX; initialAnchorY = wmAnchorY;
-            }
-        }
-
-        canvas.addEventListener('touchstart', handleTouchStart, {passive: false});
-        canvas.addEventListener('touchmove', handleTouchMove, {passive: false});
-        canvas.addEventListener('touchend', handleTouchEnd);
-        canvas.addEventListener('touchcancel', handleTouchEnd);
-
-        let isDragging = false;
-        canvas.addEventListener('mousedown', e => { if (!wmImg) return; isDragging=true; initialAnchorX=wmAnchorX; initialAnchorY=wmAnchorY; });
-        window.addEventListener('mousemove', e => { if (!isDragging || !wmImg) return; const pos = getTouchPos({clientX:e.clientX,clientY:e.clientY}); wmAnchorX=Math.min(1,Math.max(0,pos.x)); wmAnchorY=Math.min(1,Math.max(0,pos.y)); drawPreview(); });
-        window.addEventListener('mouseup', ()=> { isDragging=false; });
-
-        fileInput.addEventListener('change', () => {
-            const file = fileInput.files[0];
-            if (!file || !file.type.startsWith('image/')) return;
-            const reader = new FileReader();
-            reader.onload = e => { const img = new Image(); img.onload = () => { wmImg = img; drawPreview(); }; img.src = e.target.result; };
-            reader.readAsDataURL(file);
-        });
-
-        modal.querySelector('#closeWm').addEventListener('click', ()=> modal.remove());
-        modal.querySelector('#applyWm').addEventListener('click', ()=>{
-            if (!wmImg) { showToast('请先上传水印图片'); return; }
-            puzzle.watermark.img = wmImg;
-            puzzle.watermark.anchorX = wmAnchorX; puzzle.watermark.anchorY = wmAnchorY;
-            puzzle.watermark.sizePercent = wmSize;
-            puzzle.watermark.opacity = parseInt(opSlider.value)/100;
-            puzzle.watermark.enabled = true;
-            puzzle.softlight.intensity = parseInt(slSlider.value);
-            puzzle.softlight.enabled = puzzle.softlight.intensity > 0;
-            modal.remove(); reapplyEffects(idx);
-        });
-        modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+        const content = await zip.generateAsync({type:'blob'});
+        const url = URL.createObjectURL(content);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '芝士大王拼图合集.zip';
+        a.click();
+        setTimeout(()=>URL.revokeObjectURL(url), 100);
+        downloadZipBtn.disabled = false;
+        saveAllBtn.disabled = false;
+        showToast('ZIP 下载开始');
     }
 
-    // ==================== 位置编辑 ====================
+    saveAllBtn.addEventListener('click', saveAllOptions);
+    downloadZipBtn.addEventListener('click', downloadAllAsZip);
+
+    function openPreview(dataURL) {
+        const div=document.createElement('div'); div.style='position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:500;display:flex;align-items:center;justify-content:center;';
+        div.innerHTML=`<img src="${dataURL}" style="max-width:90vw;max-height:90vh;border-radius:8px;"><button style="position:absolute;top:20px;right:20px;background:#fff;border:none;width:30px;height:30px;border-radius:50%;">✕</button>`;
+        div.querySelector('button').addEventListener('click', ()=>div.remove()); div.addEventListener('click', e=>{ if(e.target===div) div.remove(); });
+        document.body.appendChild(div);
+    }
+
+    // 位置编辑完整功能
     function openEditor(puzzleIndex) {
         const puzzle = puzzleResults[puzzleIndex];
         const fmt = puzzle.format;
@@ -666,10 +680,8 @@
         const scale = maxW / fmt.puzzleW;
         canvas.style.width = maxW + 'px';
         canvas.style.height = (fmt.puzzleH * scale) + 'px';
-
         const offsets = puzzle.offsets.map(o => ({x:o.x, y:o.y}));
         let dragging = -1, dragStart = {x:0,y:0}, dragOffsetStart = {x:0,y:0};
-
         function redraw() {
             ctx.clearRect(0,0,fmt.puzzleW,fmt.puzzleH);
             for (let i=0; i<offsets.length; i++) {
@@ -687,7 +699,6 @@
             }
         }
         redraw();
-
         function getCellIdx(clientX, clientY) {
             const rect = canvas.getBoundingClientRect();
             const sx = fmt.puzzleW/rect.width, sy = fmt.puzzleH/rect.height;
@@ -699,54 +710,22 @@
         function startDrag(e) { e.preventDefault(); const idx = getCellIdx(e.clientX, e.clientY); if (idx>=0 && images[idx]) { dragging=idx; dragStart={x:e.clientX,y:e.clientY}; dragOffsetStart={x:offsets[idx].x,y:offsets[idx].y}; } }
         function moveDrag(e) { if (dragging<0) return; e.preventDefault(); offsets[dragging].x = dragOffsetStart.x + (e.clientX - dragStart.x); offsets[dragging].y = dragOffsetStart.y + (e.clientY - dragStart.y); redraw(); }
         function endDrag() { dragging=-1; }
-
         canvas.addEventListener('mousedown', startDrag);
         window.addEventListener('mousemove', moveDrag);
         window.addEventListener('mouseup', endDrag);
         canvas.addEventListener('touchstart', e => { if (e.touches.length===1) startDrag({clientX:e.touches[0].clientX, clientY:e.touches[0].clientY, preventDefault:()=>{}}); }, {passive:false});
         window.addEventListener('touchmove', e => { if (dragging>=0) { e.preventDefault(); moveDrag({clientX:e.touches[0].clientX, clientY:e.touches[0].clientY, preventDefault:()=>{}}); } }, {passive:false});
         window.addEventListener('touchend', endDrag);
-
         modal.querySelector('#resetPos').addEventListener('click', ()=>{ offsets.forEach(o=>{o.x=0;o.y=0;}); redraw(); });
         modal.querySelector('#cancelEdit').addEventListener('click', ()=> modal.remove());
         modal.querySelector('#applyPos').addEventListener('click', ()=>{
             puzzle.offsets = offsets.map(o=>({x:o.x, y:o.y}));
-            puzzle.rawDataURL = renderFinalPuzzle(images, offsets, fmt, fmt.grid, puzzle.numbering, puzzle.startNum, null, null, puzzle.format.ratio);
-            puzzle.dataURL = renderFinalPuzzle(images, offsets, fmt, fmt.grid, puzzle.numbering, puzzle.startNum,
-                puzzle.watermark.enabled ? puzzle.watermark : null,
-                puzzle.softlight.enabled ? puzzle.softlight : null, puzzle.format.ratio);
+            const isOriginal = puzzle.format.ratio === 'original';
+            puzzle.dataURL = renderGridPuzzle(images, offsets, fmt, puzzle.numbering, puzzle.startNum, isOriginal, currentQuality);
             renderResults(); modal.remove(); showToast('位置已更新');
         });
         modal.addEventListener('click', e=>{ if(e.target===modal) modal.remove(); });
     }
-
-    // ==================== 下载与保存 ====================
-    function downloadSingle(puzzle, idx) { const a=document.createElement('a'); a.href=puzzle.dataURL; a.download=`芝士大王拼图_${idx+1}.jpg`; a.click(); }
-    function saveToAlbum(dataURL, idx) {
-        if (/iPhone|iPad|iPod/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent)) {
-            const div=document.createElement('div'); div.style='position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:600;display:flex;align-items:center;justify-content:center;';
-            div.innerHTML=`<div style="background:#fff;border-radius:16px;padding:20px;text-align:center;max-width:300px;"><p style="font-weight:bold;">📱 保存到相册</p><p>请<b>长按</b>下方图片，选择「存储到“照片”」</p><img src="${dataURL}" style="width:100%;border-radius:8px;margin:8px 0;"><button class="btn btn-primary" id="closeSaveTip">知道了</button></div>`;
-            document.body.appendChild(div); div.querySelector('#closeSaveTip').addEventListener('click', ()=>div.remove());
-        } else { downloadSingle({dataURL}, idx); showToast('已下载，Android可到相册查看'); }
-    }
-    function openPreview(dataURL) {
-        const div=document.createElement('div'); div.style='position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:500;display:flex;align-items:center;justify-content:center;';
-        div.innerHTML=`<img src="${dataURL}" style="max-width:90vw;max-height:90vh;border-radius:8px;"><button style="position:absolute;top:20px;right:20px;background:#fff;border:none;width:30px;height:30px;border-radius:50%;">✕</button>`;
-        div.querySelector('button').addEventListener('click', ()=>div.remove()); div.addEventListener('click', e=>{ if(e.target===div) div.remove(); });
-        document.body.appendChild(div);
-    }
-    downloadZipBtn.addEventListener('click', async () => {
-        if (!puzzleResults.length) return;
-        downloadZipBtn.disabled=true;
-        const zip = new JSZip();
-        for (let i=0; i<puzzleResults.length; i++) {
-            const blob = await (await fetch(puzzleResults[i].dataURL)).blob();
-            zip.file(`芝士大王拼图_${i+1}.jpg`, blob);
-        }
-        const content = await zip.generateAsync({type:'blob'});
-        const a=document.createElement('a'); a.href=URL.createObjectURL(content); a.download='芝士大王拼图合集.zip'; a.click();
-        downloadZipBtn.disabled=false; showToast('ZIP 打包下载开始');
-    });
 })();
 </script>
 </body>
